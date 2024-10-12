@@ -130,7 +130,7 @@ if all(col in existing_data.columns for col in ['PRODUCT', 'SIZE', 'QUANTITY']):
                 st.success(success_message)
                 st.cache_data.clear()
                 existing_data = load_data()
-                refresh()
+        
             else:
                 st.warning("Please enter a quantity greater than 0.")
 
