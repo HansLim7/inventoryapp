@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from streamlit_gsheets import GSheetsConnection
 import time
+from datetime import datetime
 
 # Establish connection (ensure the correct credentials and setup)
 try:
@@ -32,6 +33,20 @@ def refresh():
         st.success("Google Sheets connection refreshed successfully.")
         time.sleep(1)
         st.rerun()
+
+# New function to log inventory changes
+def log_inventory_change(product, size, quantity, action):
+    try:
+        log_data = pd.DataFrame({
+            'Date': [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
+            'Product': [product],
+            'Size': [size],
+            'Quantity': [quantity],
+            'Action': [action]
+        })
+        conn.update(worksheet="Sheet2", data=log_data, append=True)
+    except Exception as e:
+        st.error(f"Error logging inventory change: {e}")
 
 # Load the data
 existing_data = load_data()
@@ -108,6 +123,10 @@ if all(col in existing_data.columns for col in ['PRODUCT', 'SIZE', 'QUANTITY']):
                 mask = (existing_data['PRODUCT'] == selected_product_to_update) & (existing_data['SIZE'] == selected_size_to_update)
                 existing_data.loc[mask, 'QUANTITY'] = new_quantity
                 conn.update(worksheet="Sheet1", data=existing_data)
+                
+                # Log the inventory change
+                log_inventory_change(selected_product_to_update, selected_size_to_update, quantity, action)
+                
                 st.success(success_message)
                 st.cache_data.clear()
                 existing_data = load_data()
