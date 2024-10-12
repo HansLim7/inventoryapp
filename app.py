@@ -15,7 +15,7 @@ except Exception as e:
 @st.cache_data(ttl=5)
 def load_data(sheet_name="Sheet1"):
     try:
-        data = conn.read(worksheet=sheet_name, usecols=[0, 1, 2, 3])
+        data = conn.read(worksheet=sheet_name, usecols=[0, 1, 2, 3, 4])  # Added an extra column for Sheet2
         data = data.dropna(how="all")
         data = data.loc[:, ~data.columns.str.contains('^Unnamed')]
         if sheet_name == "Sheet1":
@@ -61,13 +61,19 @@ def log_inventory_change(product, size, quantity, action):
 # Load the data
 existing_data = load_data()
 
-# Ensure required columns exist
-if all(col in existing_data.columns for col in ['PRODUCT', 'SIZE', 'QUANTITY']):
-    # Display the complete data initially
-    filtered_data = existing_data.copy()
+# Initialize session state for view toggle
+if 'view_log' not in st.session_state:
+    st.session_state.view_log = False
 
-    # Sidebar filters and add/remove functionality
-    with st.sidebar:
+# Sidebar
+with st.sidebar:
+    st.subheader("Inventory Management")
+    
+    # Toggle button for view
+    if st.button("Toggle View (Inventory Log / Full Inventory)"):
+        st.session_state.view_log = not st.session_state.view_log
+    
+    if not st.session_state.view_log:
         st.subheader("Filter Products")
 
         # Extract unique product names for filtering
@@ -78,7 +84,9 @@ if all(col in existing_data.columns for col in ['PRODUCT', 'SIZE', 'QUANTITY']):
 
         # Filter data based on selected product if not 'All'
         if selected_product != 'All':
-            filtered_data = filtered_data[filtered_data['PRODUCT'] == selected_product]
+            filtered_data = existing_data[existing_data['PRODUCT'] == selected_product]
+        else:
+            filtered_data = existing_data.copy()
 
         # Extract unique sizes for the filtered data
         sizes = filtered_data['SIZE'].unique()
@@ -140,12 +148,16 @@ if all(col in existing_data.columns for col in ['PRODUCT', 'SIZE', 'QUANTITY']):
                 st.success(success_message)
                 st.cache_data.clear()
                 existing_data = load_data()
+                filtered_data = existing_data.copy()  # Reset filtered data
                 refresh()
             else:
                 st.warning("Please enter a quantity greater than 0.")
 
-    # Display the filtered data in the main area
-    st.dataframe(filtered_data,use_container_width=True,hide_index=True)
-
+# Main area
+if st.session_state.view_log:
+    st.title("Inventory Log (Sheet2)")
+    log_data = load_data("Sheet2")
+    st.dataframe(log_data, use_container_width=True, hide_index=True)
 else:
-    st.write("Error: Required columns 'PRODUCT', 'SIZE', or 'QUANTITY' not found in the data.")
+    st.title("Current Inventory (Sheet1)")
+    st.dataframe(filtered_data, use_container_width=True, hide_index=True)
