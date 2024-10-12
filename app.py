@@ -13,16 +13,17 @@ except Exception as e:
 
 # Fetch data from Google Sheets
 @st.cache_data(ttl=5)
-def load_data():
+def load_data(sheet_name="Sheet1"):
     try:
-        data = conn.read(worksheet="Sheet1", usecols=[0, 1, 2, 3])
+        data = conn.read(worksheet=sheet_name, usecols=[0, 1, 2, 3])
         data = data.dropna(how="all")
         data = data.loc[:, ~data.columns.str.contains('^Unnamed')]
-        # Ensure QUANTITY is numeric, replace non-numeric values with 0
-        data['QUANTITY'] = pd.to_numeric(data['QUANTITY'], errors='coerce').fillna(0).astype(int)
+        if sheet_name == "Sheet1":
+            # Ensure QUANTITY is numeric, replace non-numeric values with 0
+            data['QUANTITY'] = pd.to_numeric(data['QUANTITY'], errors='coerce').fillna(0).astype(int)
         return data
     except Exception as e:
-        st.error(f"Error fetching data: {e}")
+        st.error(f"Error fetching data from {sheet_name}: {e}")
         return pd.DataFrame()
 
 def refresh():
@@ -37,14 +38,23 @@ def refresh():
 # New function to log inventory changes
 def log_inventory_change(product, size, quantity, action):
     try:
-        log_data = pd.DataFrame({
+        # Load existing log data
+        log_data = load_data("Sheet2")
+        
+        # Create new log entry
+        new_entry = pd.DataFrame({
             'Date': [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
             'Product': [product],
             'Size': [size],
             'Quantity': [quantity],
             'Action': [action]
         })
-        conn.update(worksheet="Sheet2", data=log_data, append=True)
+        
+        # Concatenate new entry with existing log data
+        updated_log_data = pd.concat([log_data, new_entry], ignore_index=True)
+        
+        # Update Sheet2 with the new log data
+        conn.update(worksheet="Sheet2", data=updated_log_data)
     except Exception as e:
         st.error(f"Error logging inventory change: {e}")
 
@@ -130,7 +140,7 @@ if all(col in existing_data.columns for col in ['PRODUCT', 'SIZE', 'QUANTITY']):
                 st.success(success_message)
                 st.cache_data.clear()
                 existing_data = load_data()
-        
+                refresh()
             else:
                 st.warning("Please enter a quantity greater than 0.")
 
