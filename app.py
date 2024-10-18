@@ -4,6 +4,7 @@ import numpy as np
 from streamlit_gsheets import GSheetsConnection
 import time
 from datetime import datetime
+import pytz
 
 # Establish connection (ensure the correct credentials and setup)
 try:
@@ -40,10 +41,10 @@ def log_inventory_change(product, size, quantity, action):
     try:
         # Load existing log data
         log_data = load_data("Sheet2")
-        
+        local_tz=pytz.timezone('Asia/Manila')
         # Create new log entry
         new_entry = pd.DataFrame({
-            'Date': [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
+            'Date': [datetime.now(local_tz).strftime("%Y-%m-%d %H:%M:%S")],
             'Product': [product],
             'Size': [size],
             'Quantity': [quantity],
