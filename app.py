@@ -44,7 +44,7 @@ def log_inventory_change(product, size, quantity, action):
         local_tz=pytz.timezone('Asia/Manila')
         # Create new log entry
         new_entry = pd.DataFrame({
-            'Date': [datetime.now(local_tz).strftime("%Y-%m-%d %h:%m:%s")],
+            'Date': [datetime.now(local_tz).strftime("%Y-%m-%d %I:%M %p")],
             'Product': [product],
             'Size': [size],
             'Quantity': [quantity],
